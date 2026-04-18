@@ -29,13 +29,13 @@ User Input
                    ▼
           ┌────────────────┐
           │  LEXER         │  Tokenises keywords, strings, symbols
-          │  (engine/lexer)│
+          │ (engine/lexer) │
           └────────┬───────┘
                    │  Token stream
                    ▼
           ┌────────────────┐
           │  PARSER        │  Builds Abstract Syntax Tree
-          │  (engine/parser)│
+          │ (engine/parser)│
           └────────┬───────┘
                    │  AST (ProgramNode → SceneNode → Statements)
                    ▼
@@ -117,7 +117,7 @@ python main.py
 
 ### REPL Commands
 
-| Command        | Description                                      |
+| Command       | Description                                      |
 |---------------|--------------------------------------------------|
 | `build`       | Interactive wizard to create scenes step by step |
 | `webbuild`    | Open browser-based visual scene builder          |
