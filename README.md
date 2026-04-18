@@ -161,7 +161,7 @@ See `examples/lost_temple.story` for a full example.
 
 Load and run it:
 ```
-StoryLang ❯ load examples/lost_temple.story
+StoryLang ❯ load story.story
 StoryLang ❯ run
 ```
 
