@@ -1,0 +1,1663 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>StoryLang Web Builder</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Sorts+Mill+Goudy:ital@0;1&display=swap');
+
+    :root {
+      --bg: #17120d;
+      --bg2: #221a13;
+      --panel: #2a2118;
+      --panel2: #34291f;
+      --line: #5a4634;
+      --ink: #f7ecd8;
+      --muted: #d4c3a8;
+      --accent: #d8aa52;
+      --accent2: #7ab49f;
+      --warn: #d08a52;
+      --danger: #d16757;
+      --chip: #3c2f24;
+      --shadow: 0 18px 42px rgba(9, 7, 5, .45);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(900px 460px at 8% -10%, rgba(216,170,82,.2), transparent 62%),
+        radial-gradient(820px 520px at 108% 0%, rgba(122,180,159,.2), transparent 56%),
+        linear-gradient(180deg, #17120d, #100c09 100%);
+      color: var(--ink);
+      font-family: "Sorts Mill Goudy", "Palatino Linotype", serif;
+      overflow: hidden;
+    }
+    button, input, textarea, select { font: inherit; }
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-rows: 58px 1fr;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      background: linear-gradient(180deg, rgba(34,26,19,.95), rgba(23,17,13,.95));
+      border-bottom: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      z-index: 5;
+    }
+    .brand {
+      font-family: "Cinzel", "Times New Roman", serif;
+      font-weight: 800;
+      letter-spacing: .8px;
+      background: linear-gradient(90deg, #efd28f, #8ac2ad);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-size: 18px;
+      white-space: nowrap;
+    }
+    .pill {
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+    .spacer { flex: 1; }
+    .btn {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #4a3827, #36291e);
+      color: var(--ink);
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { background: linear-gradient(180deg, #c89a45, #ac7c2e); border-color: #e0b562; color: #2a1a0e; font-weight: 700; }
+    .btn.warn { background: linear-gradient(180deg, #b96c43, #954e2b); border-color: #d88a5f; }
+    .layout {
+      height: calc(100% - 58px);
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      min-height: 0;
+    }
+    .canvas-wrap {
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .graph-canvas {
+      position: absolute;
+      inset: 0;
+      overflow: auto;
+      background:
+        radial-gradient(circle at 1px 1px, rgba(231,210,171,.1) 1px, transparent 0),
+        linear-gradient(180deg, rgba(39,30,22,.72), rgba(26,20,16,.9));
+      background-size: 28px 28px, cover;
+      transition: background-position .5s ease;
+    }
+    .edge-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+    #nodesLayer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-width: 100%;
+      min-height: 100%;
+    }
+    .node {
+      position: absolute;
+      width: 240px;
+      min-height: 130px;
+      background: linear-gradient(180deg, rgba(56,43,31,.97), rgba(40,31,24,.97));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      user-select: none;
+      transition: transform .22s ease, border-color .22s ease;
+    }
+    .node:hover { transform: translateY(-3px); }
+    .node.selected { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(124,119,255,.35), var(--shadow); }
+    .node.start { border-color: var(--accent2); }
+    .node-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      cursor: move;
+    }
+    .node-badge {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1f1409;
+      background: var(--accent2);
+      flex-shrink: 0;
+    }
+    .node.start .node-badge { background: var(--accent); color: #31200f; }
+    .node-title { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .node-actions { display: flex; gap: 4px; }
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .icon-btn:hover { background: var(--panel2); color: var(--ink); border-color: var(--line); }
+    .icon-btn.danger:hover { color: var(--danger); }
+    .node-body { padding: 10px 12px 12px; font-size: 12px; color: var(--muted); }
+    .desc {
+      font-style: italic;
+      margin-bottom: 8px;
+      line-height: 1.35;
+      color: #eedfca;
+    }
+    .stmt-chip {
+      background: var(--chip);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 999px;
+      padding: 5px 9px;
+      margin-top: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .node-footer {
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      gap: 8px;
+      background: rgba(255,255,255,.02);
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+    .handle {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      border: 2px solid #1e1712;
+      background: var(--accent);
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: crosshair;
+    }
+    .handle.in { left: -6px; background: var(--accent2); }
+    .handle.out { right: -6px; }
+    .handle.connecting { box-shadow: 0 0 0 4px rgba(124,119,255,.18); }
+    .sidebar {
+      border-left: 1px solid var(--line);
+      background: rgba(24,18,14,.95);
+      display: grid;
+      grid-template-rows: 42px 1fr;
+      min-height: 0;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--line);
+    }
+    .tab {
+      flex: 1;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+    .tab.active { color: #9fd0be; box-shadow: inset 0 -2px 0 var(--accent2); }
+    .panel {
+      min-height: 0;
+      overflow: auto;
+      padding: 14px;
+    }
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin: 6px 0 10px;
+    }
+    .field { margin-bottom: 12px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .9px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #1b1511;
+      color: var(--ink);
+      padding: 9px 10px;
+      outline: none;
+    }
+    .field textarea { min-height: 84px; resize: vertical; }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+    .scene-list, .stmt-list { display: grid; gap: 8px; }
+    .scene-item, .stmt-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 10px;
+    }
+    .scene-item.active { border-color: var(--accent); }
+    .scene-item-top, .stmt-item-top { display: flex; gap: 8px; align-items: center; }
+    .scene-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .srcbox {
+      width: 100%;
+      min-height: 280px;
+      resize: vertical;
+      font-family: Consolas, 'Courier New', monospace;
+      line-height: 1.55;
+      tab-size: 2;
+    }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 8, 14, .6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal.open { display: flex; }
+    .modal-card {
+      width: min(560px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .modal-card h3 { margin-bottom: 14px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      background: rgba(44,33,24,.98);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transition: opacity .2s ease;
+      pointer-events: none;
+      z-index: 20;
+    }
+    .toast.show { opacity: 1; }
+    svg.edge-layer line {
+      stroke: #d3a14c;
+      stroke-width: 2;
+      marker-end: url(#arrow);
+      opacity: .88;
+    }
+    svg.edge-layer line.if { stroke: #7ab49f; }
+    svg.edge-layer line.choice { stroke: #d8aa52; }
+    svg.edge-layer line.else { stroke: #d08a52; stroke-dasharray: 5 4; }
+    .empty {
+      color: var(--muted);
+      font-size: 14px;
+      padding: 18px 0;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">StoryLang Web Builder</div>
+      <div class="pill" id="sceneCount">0 scenes</div>
+      <button class="btn" id="addSceneBtn">+ Scene</button>
+      <button class="btn" id="physicsBtn">Arcane Flow: On</button>
+      <button class="btn" id="undoBtn">Undo</button>
+      <button class="btn" id="redoBtn">Redo</button>
+      <div class="spacer"></div>
+      <button class="btn warn" id="cancelBtn">Cancel</button>
+      <button class="btn primary" id="finishBtn">Finish & Return</button>
+    </div>
+
+    <div class="layout">
+      <div class="canvas-wrap">
+        <div class="graph-canvas" id="canvas">
+          <svg class="edge-layer" id="edgeSvg">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L10,5 L0,10 z" fill="#d3a14c"></path>
+              </marker>
+            </defs>
+          </svg>
+          <div id="nodesLayer"></div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="tabs">
+          <button class="tab active" data-tab="editor">Editor</button>
+          <button class="tab" data-tab="source">Source</button>
+          <button class="tab" data-tab="scenes">Scenes</button>
+        </div>
+        <div class="panel" id="sidebarPanel"></div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="modal" id="sceneModal">
+    <div class="modal-card">
+      <h3>New Scene</h3>
+      <div class="field">
+        <label>Scene Name</label>
+        <input id="sceneNameInput" placeholder="forest_path" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="sceneCancelBtn">Cancel</button>
+        <button class="btn primary" id="sceneCreateBtn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="renameModal">
+    <div class="modal-card">
+      <h3>Rename Scene</h3>
+      <div class="field">
+        <label>New Name</label>
+        <input id="renameInput" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="renameCancelBtn">Cancel</button>
+        <button class="btn primary" id="renameSaveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="stmtModal">
+    <div class="modal-card">
+      <h3>Edit Statement</h3>
+      <div class="field">
+        <label>Statement</label>
+        <textarea id="stmtEditInput" class="srcbox"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="stmtCancelBtn">Cancel</button>
+        <button class="btn primary" id="stmtSaveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+    const INITIAL_SOURCE = __INITIAL_SOURCE_JSON__;
+
+    const state = {
+      scenes: [],
+      selectedId: null,
+      tab: 'editor',
+      dirtySource: false,
+      sourceText: '',
+      history: [],
+      future: [],
+      dragging: null,
+      dragOffsetX: 0,
+      dragOffsetY: 0,
+      connectingFrom: null,
+      modal: null,
+      renameSceneId: null,
+      editingStmt: null,
+      physicsEnabled: true,
+      animationFrame: null,
+      worldWidth: 1400,
+      worldHeight: 900,
+    };
+
+    const els = {
+      canvas: document.getElementById('canvas'),
+      nodesLayer: document.getElementById('nodesLayer'),
+      edgeSvg: document.getElementById('edgeSvg'),
+      sidebarPanel: document.getElementById('sidebarPanel'),
+      sceneCount: document.getElementById('sceneCount'),
+      toast: document.getElementById('toast'),
+      sceneModal: document.getElementById('sceneModal'),
+      renameModal: document.getElementById('renameModal'),
+      stmtModal: document.getElementById('stmtModal'),
+      sourceText: null,
+    };
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => els.toast.classList.remove('show'), 1600);
+    }
+
+    function normalizeIdentifier(raw) {
+      const value = (raw || '').trim().replace(/\s+/g, '_');
+      if (!value || !IDENT_RE.test(value)) return null;
+      return value;
+    }
+
+    function uid() {
+      return Math.random().toString(36).slice(2, 10);
+    }
+
+    function cloneScenes() {
+      return JSON.parse(JSON.stringify(state.scenes));
+    }
+
+    function pushHistory() {
+      state.history.push(JSON.stringify({ scenes: cloneScenes(), selectedId: state.selectedId }));
+      if (state.history.length > 100) state.history.shift();
+      state.future = [];
+    }
+
+    function undo() {
+      if (!state.history.length) return;
+      state.future.unshift(JSON.stringify({ scenes: cloneScenes(), selectedId: state.selectedId }));
+      const snap = JSON.parse(state.history.pop());
+      state.scenes = snap.scenes;
+      state.selectedId = snap.selectedId;
+      syncSourceFromScenes();
+      render();
+      showToast('Undo');
+    }
+
+    function redo() {
+      if (!state.future.length) return;
+      state.history.push(JSON.stringify({ scenes: cloneScenes(), selectedId: state.selectedId }));
+      const snap = JSON.parse(state.future.shift());
+      state.scenes = snap.scenes;
+      state.selectedId = snap.selectedId;
+      syncSourceFromScenes();
+      render();
+      showToast('Redo');
+    }
+
+    function scenesToSource(scenes) {
+      return scenes.map(scene => {
+        const lines = [`scene ${scene.name} {`];
+        if (scene.description_mode === 'manual' && scene.description_text) {
+          lines.push(`  description: "${String(scene.description_text).replace(/"/g, '\\"')}"`);
+        } else if (scene.description_mode === 'ai' && scene.description_text) {
+          lines.push(`  AI_generate_scene "${String(scene.description_text).replace(/"/g, '\\"')}"`);
+        }
+        for (const stmt of scene.statements) {
+          String(stmt).split('\n').forEach(line => lines.push(`  ${line}`));
+        }
+        lines.push('}');
+        return lines.join('\n');
+      }).join('\n\n');
+    }
+
+    function parseSource(source) {
+      const scenes = [];
+      const blocks = source.match(/scene\s+[A-Za-z_][A-Za-z0-9_]*\s*\{[\s\S]*?\}/g) || [];
+      for (const block of blocks) {
+        const head = block.match(/scene\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/);
+        if (!head) continue;
+        const name = head[1];
+        const body = block.slice(block.indexOf('{') + 1, block.lastIndexOf('}'));
+        const scene = {
+          id: uid(),
+          name,
+          description_mode: 'none',
+          description_text: '',
+          statements: [],
+          x: 40,
+          y: 40,
+        };
+        const lines = body.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.startsWith('description:')) {
+            const match = line.match(/^description:\s*"([\s\S]*)"$/);
+            if (match) {
+              scene.description_mode = 'manual';
+              scene.description_text = match[1].replace(/\\"/g, '"');
+              continue;
+            }
+          }
+          if (line.startsWith('AI_generate_scene')) {
+            const match = line.match(/^AI_generate_scene\s+"([\s\S]*)"$/);
+            if (match) {
+              scene.description_mode = 'ai';
+              scene.description_text = match[1].replace(/\\"/g, '"');
+              continue;
+            }
+          }
+          if (line.startsWith('if ') && i + 1 < lines.length && lines[i + 1].startsWith('else ->')) {
+            scene.statements.push(`${line}\n${lines[i + 1]}`);
+            i += 1;
+            continue;
+          }
+          scene.statements.push(line);
+        }
+        scenes.push(scene);
+      }
+      return scenes;
+    }
+
+    function syncSourceFromScenes() {
+      const source = scenesToSource(state.scenes);
+      state.sourceText = source || '# No scenes yet';
+      state.dirtySource = false;
+      if (els.sourceText && state.tab === 'source') {
+        els.sourceText.value = state.sourceText;
+      }
+    }
+
+    function ensureSelection() {
+      if (!state.scenes.length) {
+        state.selectedId = null;
+        return;
+      }
+      if (!state.selectedId || !state.scenes.some(scene => scene.id === state.selectedId)) {
+        state.selectedId = state.scenes[0].id;
+      }
+    }
+
+    function selectedScene() {
+      return state.scenes.find(scene => scene.id === state.selectedId) || null;
+    }
+
+    function renderNodes() {
+      els.nodesLayer.innerHTML = '';
+      for (const scene of state.scenes) {
+        const node = document.createElement('div');
+        node.className = `node${scene.id === state.selectedId ? ' selected' : ''}${state.scenes[0]?.id === scene.id ? ' start' : ''}`;
+        node.style.left = `${scene.x || 40}px`;
+        node.style.top = `${scene.y || 40}px`;
+        node.dataset.id = scene.id;
+
+        node.innerHTML = `
+          <div class="node-header" data-drag="header">
+            <div class="node-badge">${state.scenes[0]?.id === scene.id ? '▶' : '◆'}</div>
+            <div class="node-title">${scene.name}</div>
+            <div class="node-actions">
+              <button class="icon-btn" data-act="rename" title="Rename">✏</button>
+              <button class="icon-btn danger" data-act="delete" title="Delete">✕</button>
+            </div>
+          </div>
+          <div class="node-body">
+            ${scene.description_text ? `<div class="desc">${scene.description_mode === 'ai' ? '🤖 ' : '📝 '}${escapeHtml(scene.description_text).slice(0, 90)}${scene.description_text.length > 90 ? '…' : ''}</div>` : '<div class="desc">No description</div>'}
+            ${scene.statements.slice(0, 3).map(stmt => `<div class="stmt-chip">${escapeHtml(stmt).slice(0, 90)}${stmt.length > 90 ? '…' : ''}</div>`).join('')}
+            ${scene.statements.length > 3 ? `<div class="meta">+${scene.statements.length - 3} more statements</div>` : ''}
+          </div>
+          <div class="node-footer">
+            <span class="meta">${scene.statements.length} stmt(s)</span>
+            <button class="btn" data-act="connect">Connect</button>
+          </div>
+          <div class="handle in" data-handle="in"></div>
+          <div class="handle out" data-handle="out"></div>
+        `;
+
+        node.addEventListener('click', (event) => {
+          const action = event.target.dataset.act;
+          const handle = event.target.dataset.handle;
+          if (action === 'rename') return openRename(scene.id);
+          if (action === 'delete') return deleteScene(scene.id);
+          if (action === 'connect') {
+            state.connectingFrom = scene.id;
+            showToast(`Pick a target scene for ${scene.name}`);
+            return;
+          }
+          if (handle === 'in' || handle === 'out') return;
+          state.selectedId = scene.id;
+          render();
+        });
+
+        node.addEventListener('mousedown', (event) => {
+          if (event.target.closest('[data-drag="header"]')) {
+            state.dragging = scene.id;
+            state.dragOffsetX = event.offsetX;
+            state.dragOffsetY = event.offsetY;
+            event.preventDefault();
+          }
+        });
+
+        node.addEventListener('dblclick', () => {
+          state.selectedId = scene.id;
+          state.tab = 'editor';
+          render();
+        });
+
+        node.querySelector('[data-handle="in"]').addEventListener('click', () => {
+          if (state.connectingFrom && state.connectingFrom !== scene.id) {
+            addChoiceEdge(state.connectingFrom, scene.id);
+          }
+        });
+        node.querySelector('[data-handle="out"]').addEventListener('click', () => {
+          state.connectingFrom = scene.id;
+          showToast(`Connecting from ${scene.name}`);
+        });
+
+        els.nodesLayer.appendChild(node);
+      }
+    }
+
+    function addChoiceEdge(fromId, toId) {
+      const from = state.scenes.find(scene => scene.id === fromId);
+      const to = state.scenes.find(scene => scene.id === toId);
+      if (!from || !to) return;
+      const label = prompt(`Choice label for ${from.name} → ${to.name}:`, `Go to ${to.name}`);
+      if (!label) return;
+      pushHistory();
+      from.statements.push(`choice "${String(label).replace(/"/g, '\\"')}" -> ${to.name}`);
+      state.connectingFrom = null;
+      syncSourceFromScenes();
+      render();
+      showToast('Choice added');
+    }
+
+    function renderEdges() {
+      const svg = els.edgeSvg;
+      while (svg.childNodes.length > 1) svg.removeChild(svg.lastChild);
+      svg.setAttribute('width', String(state.worldWidth));
+      svg.setAttribute('height', String(state.worldHeight));
+
+      for (const scene of state.scenes) {
+        const fromNode = els.nodesLayer.querySelector(`.node[data-id="${scene.id}"]`);
+        if (!fromNode) continue;
+        const fromRect = fromNode.getBoundingClientRect();
+        const fromX = (scene.x || 40) + fromRect.width;
+        const fromY = (scene.y || 40) + fromRect.height / 2;
+
+        for (const stmt of scene.statements) {
+          const choiceMatch = stmt.match(/^choice\s+"[^"]*"\s*->\s*([A-Za-z_][A-Za-z0-9_]*)/);
+          const ifMatch = stmt.match(/^if\s+.*?->\s*([A-Za-z_][A-Za-z0-9_]*)/);
+          const elseMatch = stmt.match(/else\s*->\s*([A-Za-z_][A-Za-z0-9_]*)/);
+          const targetName = choiceMatch?.[1] || ifMatch?.[1] || elseMatch?.[1];
+          if (!targetName) continue;
+          const target = state.scenes.find(s => s.name === targetName);
+          if (!target) continue;
+          const targetNode = els.nodesLayer.querySelector(`.node[data-id="${target.id}"]`);
+          if (!targetNode) continue;
+          const targetRect = targetNode.getBoundingClientRect();
+          const targetX = (target.x || 40);
+          const targetY = (target.y || 40) + targetRect.height / 2;
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', fromX);
+          line.setAttribute('y1', fromY);
+          line.setAttribute('x2', targetX);
+          line.setAttribute('y2', targetY);
+          line.classList.add(choiceMatch ? 'choice' : ifMatch ? 'if' : 'else');
+          svg.appendChild(line);
+        }
+      }
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderSceneList() {
+      const scene = selectedScene();
+      const list = state.scenes.map((sc, index) => `
+        <div class="scene-item${sc.id === state.selectedId ? ' active' : ''}">
+          <div class="scene-item-top">
+            <span class="pill">${index === 0 ? 'START' : `#${index + 1}`}</span>
+            <div class="scene-name">${escapeHtml(sc.name)}</div>
+            <button class="icon-btn" data-scene-act="up" data-id="${sc.id}">↑</button>
+            <button class="icon-btn" data-scene-act="down" data-id="${sc.id}">↓</button>
+          </div>
+          <div class="meta">${sc.description_mode}${sc.statements.length ? ` · ${sc.statements.length} statement(s)` : ''}</div>
+        </div>
+      `).join('');
+
+      els.sidebarPanel.innerHTML = list || '<div class="empty">No scenes yet. Add your first scene.</div>';
+      els.sidebarPanel.querySelectorAll('[data-scene-act]').forEach(btn => {
+        btn.addEventListener('click', event => {
+          event.stopPropagation();
+          const id = btn.dataset.id;
+          const idx = state.scenes.findIndex(scene => scene.id === id);
+          if (btn.dataset.sceneAct === 'up') moveScene(idx, -1);
+          if (btn.dataset.sceneAct === 'down') moveScene(idx, 1);
+        });
+      });
+      els.sidebarPanel.querySelectorAll('.scene-item').forEach((el, index) => {
+        el.addEventListener('click', () => {
+          state.selectedId = state.scenes[index].id;
+          state.tab = 'editor';
+          render();
+        });
+      });
+
+      if (state.tab === 'editor') {
+        renderEditorPanel(scene);
+      } else if (state.tab === 'source') {
+        renderSourcePanel();
+      } else {
+        renderScenePanel();
+      }
+    }
+
+    function renderScenePanel() {
+      const html = state.scenes.length
+        ? `<div class="scene-list">${state.scenes.map((sc, i) => `
+            <div class="scene-item${sc.id === state.selectedId ? ' active' : ''}">
+              <div class="scene-item-top">
+                <span class="pill">${i === 0 ? 'START' : `#${i + 1}`}</span>
+                <div class="scene-name">${escapeHtml(sc.name)}</div>
+              </div>
+              <div class="meta">${sc.statements.length} statement(s)</div>
+            </div>
+          `).join('')}</div>`
+        : '<div class="empty">No scenes yet. Add one to get started.</div>';
+      els.sidebarPanel.innerHTML = html;
+      els.sidebarPanel.querySelectorAll('.scene-item').forEach((el, index) => {
+        el.addEventListener('click', () => {
+          state.selectedId = state.scenes[index].id;
+          state.tab = 'editor';
+          render();
+        });
+      });
+    }
+
+    function renderSourcePanel() {
+      state.sourceText = state.dirtySource ? state.sourceText : scenesToSource(state.scenes) || '# No scenes yet';
+      els.sidebarPanel.innerHTML = `
+        <div class="row" style="margin-bottom:10px;">
+          <button class="btn" id="refreshSource">Refresh</button>
+          <button class="btn" id="applySource">Apply to Graph</button>
+        </div>
+        <textarea class="srcbox" id="sourceEditor"></textarea>
+        <div class="hint">Edit the source directly here, then click Apply to Graph to rebuild scenes from text.</div>
+      `;
+      const editor = document.getElementById('sourceEditor');
+      editor.value = state.sourceText;
+      editor.addEventListener('input', () => {
+        state.sourceText = editor.value;
+        state.dirtySource = true;
+      });
+      document.getElementById('refreshSource').addEventListener('click', () => {
+        state.sourceText = scenesToSource(state.scenes) || '# No scenes yet';
+        state.dirtySource = false;
+        editor.value = state.sourceText;
+        showToast('Source refreshed');
+      });
+      document.getElementById('applySource').addEventListener('click', () => {
+        const parsed = parseSource(editor.value);
+        if (!parsed.length) {
+          alert('Could not parse source into scenes.');
+          return;
+        }
+        pushHistory();
+        state.scenes = parsed.map((scene, index) => ({ ...scene, x: 40 + (index % 3) * 270, y: 40 + Math.floor(index / 3) * 220 }));
+        state.selectedId = state.scenes[0]?.id || null;
+        state.dirtySource = false;
+        render();
+        showToast(`Applied ${parsed.length} scene(s)`);
+      });
+    }
+
+    function renderEditorPanel(scene) {
+      if (!scene) {
+        els.sidebarPanel.innerHTML = '<div class="empty">Click a scene node to edit it.</div>';
+        return;
+      }
+      const html = `
+        <div class="section-title">Scene Editor</div>
+        <div class="field">
+          <label>Scene Name</label>
+          <input id="sceneNameField" value="${escapeHtml(scene.name)}" />
+        </div>
+        <div class="field">
+          <label>Description Mode</label>
+          <select id="descModeField">
+            <option value="none" ${scene.description_mode === 'none' ? 'selected' : ''}>None</option>
+            <option value="manual" ${scene.description_mode === 'manual' ? 'selected' : ''}>Manual Description</option>
+            <option value="ai" ${scene.description_mode === 'ai' ? 'selected' : ''}>AI Scene Prompt</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Description / Prompt</label>
+          <textarea id="descTextField">${escapeHtml(scene.description_text || '')}</textarea>
+        </div>
+        <div class="field">
+          <label>Statements</label>
+          <div class="stmt-list" id="stmtList"></div>
+        </div>
+        <div class="field">
+          <label>Add Statement</label>
+          <select id="stmtTypeField">
+            <option value="choice">Player choice</option>
+            <option value="if">If condition</option>
+            <option value="set">Set variable / inventory</option>
+            <option value="unset">Unset variable</option>
+            <option value="remove">Remove item</option>
+            <option value="aiopt">AI-generated choices</option>
+          </select>
+        </div>
+        <div id="stmtForm"></div>
+        <button class="btn primary" id="addStmtBtn">Add Statement</button>
+      `;
+      els.sidebarPanel.innerHTML = html;
+      const nameField = document.getElementById('sceneNameField');
+      const descModeField = document.getElementById('descModeField');
+      const descTextField = document.getElementById('descTextField');
+      const stmtTypeField = document.getElementById('stmtTypeField');
+      const stmtForm = document.getElementById('stmtForm');
+      const stmtList = document.getElementById('stmtList');
+
+      nameField.addEventListener('change', () => {
+        const newName = normalizeIdentifier(nameField.value);
+        if (!newName) return alert('Invalid scene name');
+        if (state.scenes.some(sc => sc.id !== scene.id && sc.name === newName)) return alert('Scene already exists');
+        pushHistory();
+        scene.name = newName;
+        syncSourceFromScenes();
+        render();
+      });
+      descModeField.addEventListener('change', () => {
+        pushHistory();
+        scene.description_mode = descModeField.value;
+        if (scene.description_mode === 'none') scene.description_text = '';
+        syncSourceFromScenes();
+        render();
+      });
+      descTextField.addEventListener('input', () => {
+        pushHistory();
+        scene.description_text = descTextField.value;
+        syncSourceFromScenes();
+        render();
+      });
+      stmtTypeField.addEventListener('change', renderStmtForm);
+
+      renderStmtForm();
+      renderStmtList(stmtList, scene);
+
+      document.getElementById('addStmtBtn').addEventListener('click', () => {
+        const built = buildStatement(stmtTypeField.value);
+        if (built.error) return alert(built.error);
+        pushHistory();
+        scene.statements.push(built.value);
+        syncSourceFromScenes();
+        render();
+        showToast('Statement added');
+      });
+    }
+
+    function renderStmtList(container, scene) {
+      container.innerHTML = scene.statements.length
+        ? scene.statements.map((stmt, idx) => `
+            <div class="stmt-item">
+              <div class="stmt-item-top">
+                <div class="pill">#${idx + 1}</div>
+                <div class="scene-name" style="font-size:12px;">${escapeHtml(stmt).slice(0, 70)}${stmt.length > 70 ? '…' : ''}</div>
+              </div>
+              <div class="row" style="margin-top:8px;">
+                <button class="btn" data-stmt-act="edit" data-idx="${idx}">Edit</button>
+                <button class="btn" data-stmt-act="up" data-idx="${idx}">Up</button>
+                <button class="btn" data-stmt-act="down" data-idx="${idx}">Down</button>
+                <button class="btn warn" data-stmt-act="remove" data-idx="${idx}">Remove</button>
+              </div>
+            </div>
+          `).join('')
+        : '<div class="empty">No statements yet.</div>';
+
+      container.querySelectorAll('[data-stmt-act]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.dataset.idx);
+          const action = btn.dataset.stmtAct;
+          if (action === 'edit') openStatementEditor(scene.id, idx);
+          if (action === 'up' && idx > 0) moveStatement(scene.id, idx, -1);
+          if (action === 'down' && idx < scene.statements.length - 1) moveStatement(scene.id, idx, 1);
+          if (action === 'remove') removeStatement(scene.id, idx);
+        });
+      });
+    }
+
+    function renderStmtForm() {
+      const type = document.getElementById('stmtTypeField').value;
+      const form = document.getElementById('stmtForm');
+      const sceneOptions = state.scenes.map(sc => `<option value="${escapeHtml(sc.name)}">${escapeHtml(sc.name)}</option>`).join('');
+      if (type === 'choice') {
+        form.innerHTML = `
+          <div class="field"><label>Choice Label</label><input id="choiceLabel" placeholder="Go north" /></div>
+          <div class="field"><label>Target Scene</label><select id="choiceTarget"><option value="">Select…</option>${sceneOptions}</select></div>
+        `;
+      } else if (type === 'if') {
+        form.innerHTML = `
+          <div class="field"><label>Condition Type</label>
+            <select id="ifKind">
+              <option value="flag">Flag exists</option>
+              <option value="item">Inventory item exists</option>
+              <option value="compare">Comparison</option>
+            </select>
+          </div>
+          <div id="ifFields"></div>
+          <div class="field"><label>Then Target Scene</label><select id="ifThen"><option value="">Select…</option>${sceneOptions}</select></div>
+          <div class="field"><label>Else Target Scene (optional)</label><select id="ifElse"><option value="">None</option>${sceneOptions}</select></div>
+        `;
+        const ifFields = form.querySelector('#ifFields');
+        const renderIfFields = () => {
+          const kind = document.getElementById('ifKind').value;
+          if (kind === 'flag') {
+            ifFields.innerHTML = `<div class="field"><label>Flag Variable</label><input id="ifFlag" placeholder="has_key" /></div>`;
+          } else if (kind === 'item') {
+            ifFields.innerHTML = `<div class="field"><label>Item Name</label><input id="ifItem" placeholder="torch" /></div>`;
+          } else {
+            ifFields.innerHTML = `
+              <div class="field"><label>Variable</label><input id="ifVar" placeholder="score" /></div>
+              <div class="field"><label>Operator</label><select id="ifOp"><option value=">">&gt;</option><option value="<">&lt;</option><option value="==">==</option></select></div>
+              <div class="field"><label>Value</label><input id="ifVal" placeholder="3 or hero" /></div>
+            `;
+          }
+        };
+        document.getElementById('ifKind').addEventListener('change', renderIfFields);
+        renderIfFields();
+      } else if (type === 'set') {
+        form.innerHTML = `
+          <div class="field"><label>Set Mode</label>
+            <select id="setMode">
+              <option value="flag">Set flag</option>
+              <option value="text">Set text</option>
+              <option value="num">Set number</option>
+              <option value="inc">Increment</option>
+              <option value="dec">Decrement</option>
+              <option value="item">Add inventory item</option>
+            </select>
+          </div>
+          <div id="setFields"></div>
+        `;
+        const setFields = form.querySelector('#setFields');
+        const renderSetFields = () => {
+          const mode = document.getElementById('setMode').value;
+          if (mode === 'item') {
+            setFields.innerHTML = `<div class="field"><label>Item Name</label><input id="setItem" placeholder="torch" /></div>`;
+          } else {
+            setFields.innerHTML = `<div class="field"><label>Variable</label><input id="setVar" placeholder="score" /></div>`;
+            if (mode === 'text') {
+              setFields.innerHTML += `<div class="field"><label>Text Value</label><input id="setText" placeholder="Hero" /></div>`;
+            } else if (mode === 'num' || mode === 'inc' || mode === 'dec') {
+              setFields.innerHTML += `<div class="field"><label>Integer Value</label><input id="setNum" placeholder="1" /></div>`;
+            }
+          }
+        };
+        document.getElementById('setMode').addEventListener('change', renderSetFields);
+        renderSetFields();
+      } else if (type === 'unset') {
+        form.innerHTML = `<div class="field"><label>Variable to Unset</label><input id="unsetVar" placeholder="has_key" /></div>`;
+      } else if (type === 'remove') {
+        form.innerHTML = `<div class="field"><label>Item to Remove</label><input id="removeItem" placeholder="torch" /></div>`;
+      } else if (type === 'aiopt') {
+        form.innerHTML = `<div class="field"><label>AI Options Prompt</label><textarea id="aiPrompt" placeholder="Describe the situation"></textarea></div>`;
+      }
+    }
+
+    function buildStatement(type) {
+      const get = id => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+      };
+      if (type === 'choice') {
+        const label = get('choiceLabel');
+        const target = normalizeIdentifier(get('choiceTarget'));
+        if (!label) return { error: 'Choice label required.' };
+        if (!target) return { error: 'Target scene required.' };
+        return { value: `choice "${label.replace(/"/g, '\\"')}" -> ${target}` };
+      }
+      if (type === 'if') {
+        const kind = get('ifKind');
+        let cond = '';
+        if (kind === 'flag') {
+          const flag = normalizeIdentifier(get('ifFlag'));
+          if (!flag) return { error: 'Flag variable invalid.' };
+          cond = `has ${flag}`;
+        } else if (kind === 'item') {
+          const item = get('ifItem');
+          if (!item) return { error: 'Item name required.' };
+          cond = `has item "${item.replace(/"/g, '\\"')}"`;
+        } else {
+          const variable = normalizeIdentifier(get('ifVar'));
+          const op = get('ifOp');
+          const value = get('ifVal');
+          if (!variable || !value) return { error: 'Variable and value required.' };
+          if ((op === '>' || op === '<') && !/^-?\d+$/.test(value)) return { error: '> and < require integer values.' };
+          const valExpr = (op === '==' && !/^-?\d+$/.test(value)) ? `"${value.replace(/"/g, '\\"')}"` : value;
+          cond = `${variable} ${op} ${valExpr}`;
+        }
+        const thenTarget = normalizeIdentifier(get('ifThen'));
+        const elseTarget = normalizeIdentifier(get('ifElse'));
+        if (!thenTarget) return { error: 'Then target required.' };
+        return { value: elseTarget ? `if ${cond} -> ${thenTarget}\nelse -> ${elseTarget}` : `if ${cond} -> ${thenTarget}` };
+      }
+      if (type === 'set') {
+        const mode = get('setMode');
+        if (mode === 'item') {
+          const item = get('setItem');
+          if (!item) return { error: 'Item name required.' };
+          return { value: `set item "${item.replace(/"/g, '\\"')}"` };
+        }
+        const variable = normalizeIdentifier(get('setVar'));
+        if (!variable) return { error: 'Variable invalid.' };
+        if (mode === 'flag') return { value: `set ${variable}` };
+        if (mode === 'text') {
+          const text = get('setText');
+          if (!text) return { error: 'Text value required.' };
+          return { value: `set ${variable} = "${text.replace(/"/g, '\\"')}"` };
+        }
+        const num = get('setNum');
+        if (!/^-?\d+$/.test(num)) return { error: 'Integer required.' };
+        if (mode === 'num') return { value: `set ${variable} = ${num}` };
+        if (mode === 'inc') return { value: `set ${variable} += ${num}` };
+        if (mode === 'dec') return { value: `set ${variable} -= ${num}` };
+      }
+      if (type === 'unset') {
+        const variable = normalizeIdentifier(get('unsetVar'));
+        if (!variable) return { error: 'Variable invalid.' };
+        return { value: `unset ${variable}` };
+      }
+      if (type === 'remove') {
+        const item = get('removeItem');
+        if (!item) return { error: 'Item required.' };
+        return { value: `remove item "${item.replace(/"/g, '\\"')}"` };
+      }
+      if (type === 'aiopt') {
+        const prompt = get('aiPrompt');
+        if (!prompt) return { error: 'Prompt required.' };
+        return { value: `AI_generate_options "${prompt.replace(/"/g, '\\"')}"` };
+      }
+      return { error: 'Unknown statement type.' };
+    }
+
+    function openSceneModal() {
+      state.modal = 'scene';
+      document.getElementById('sceneNameInput').value = '';
+      els.sceneModal.classList.add('open');
+      setTimeout(() => document.getElementById('sceneNameInput').focus(), 0);
+    }
+
+    function initializeMotion(scene) {
+      if (typeof scene.vx !== 'number') scene.vx = (Math.random() - 0.5) * 0.7;
+      if (typeof scene.vy !== 'number') scene.vy = (Math.random() - 0.5) * 0.7;
+    }
+
+    function updateWorldBounds() {
+      const viewportW = Math.max(els.canvas.clientWidth || 0, 780);
+      const viewportH = Math.max(els.canvas.clientHeight || 0, 560);
+      let maxX = viewportW;
+      let maxY = viewportH;
+      for (const scene of state.scenes) {
+        maxX = Math.max(maxX, (scene.x || 40) + 320);
+        maxY = Math.max(maxY, (scene.y || 40) + 230);
+      }
+      state.worldWidth = maxX + 120;
+      state.worldHeight = maxY + 120;
+      els.nodesLayer.style.width = `${state.worldWidth}px`;
+      els.nodesLayer.style.height = `${state.worldHeight}px`;
+      els.edgeSvg.style.width = `${state.worldWidth}px`;
+      els.edgeSvg.style.height = `${state.worldHeight}px`;
+    }
+
+    function gatherLinks() {
+      const links = [];
+      for (const scene of state.scenes) {
+        for (const stmt of scene.statements) {
+          const choiceMatch = stmt.match(/^choice\s+"[^"]*"\s*->\s*([A-Za-z_][A-Za-z0-9_]*)/);
+          const ifMatch = stmt.match(/^if\s+.*?->\s*([A-Za-z_][A-Za-z0-9_]*)/);
+          const elseMatch = stmt.match(/else\s*->\s*([A-Za-z_][A-Za-z0-9_]*)/);
+          const targetName = choiceMatch?.[1] || ifMatch?.[1] || elseMatch?.[1];
+          if (!targetName) continue;
+          const target = state.scenes.find(s => s.name === targetName);
+          if (!target) continue;
+          links.push([scene.id, target.id]);
+        }
+      }
+      return links;
+    }
+
+    function runPhysicsFrame() {
+      state.animationFrame = requestAnimationFrame(runPhysicsFrame);
+      if (!state.physicsEnabled || state.scenes.length < 2) return;
+
+      const byId = new Map(state.scenes.map(scene => [scene.id, scene]));
+      const forces = new Map(state.scenes.map(scene => [scene.id, { x: 0, y: 0 }]));
+      const links = gatherLinks();
+
+      for (let i = 0; i < state.scenes.length; i++) {
+        const a = state.scenes[i];
+        for (let j = i + 1; j < state.scenes.length; j++) {
+          const b = state.scenes[j];
+          const dx = (a.x || 0) - (b.x || 0);
+          const dy = (a.y || 0) - (b.y || 0);
+          const distSq = Math.max(2600, dx * dx + dy * dy);
+          const repulse = 18000 / distSq;
+          const dist = Math.sqrt(distSq);
+          const nx = dx / dist;
+          const ny = dy / dist;
+          forces.get(a.id).x += nx * repulse;
+          forces.get(a.id).y += ny * repulse;
+          forces.get(b.id).x -= nx * repulse;
+          forces.get(b.id).y -= ny * repulse;
+        }
+      }
+
+      for (const [fromId, toId] of links) {
+        const from = byId.get(fromId);
+        const to = byId.get(toId);
+        if (!from || !to) continue;
+        const dx = (to.x || 0) - (from.x || 0);
+        const dy = (to.y || 0) - (from.y || 0);
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const targetDist = 270;
+        const spring = (dist - targetDist) * 0.0045;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        forces.get(from.id).x += nx * spring;
+        forces.get(from.id).y += ny * spring;
+        forces.get(to.id).x -= nx * spring;
+        forces.get(to.id).y -= ny * spring;
+      }
+
+      const centerX = state.worldWidth * 0.48;
+      const centerY = state.worldHeight * 0.46;
+      let moved = false;
+
+      for (const scene of state.scenes) {
+        initializeMotion(scene);
+        if (state.dragging === scene.id) continue;
+        const force = forces.get(scene.id);
+        scene.vx = (scene.vx + force.x + ((Math.random() - 0.5) * 0.02)) * 0.92;
+        scene.vy = (scene.vy + force.y + ((Math.random() - 0.5) * 0.02)) * 0.92;
+        scene.vx += (centerX - scene.x) * 0.00006;
+        scene.vy += (centerY - scene.y) * 0.00006;
+        scene.x += scene.vx;
+        scene.y += scene.vy;
+        scene.x = Math.max(16, Math.min(state.worldWidth - 300, scene.x));
+        scene.y = Math.max(16, Math.min(state.worldHeight - 180, scene.y));
+        moved = true;
+      }
+
+      if (moved) {
+        updateWorldBounds();
+        for (const scene of state.scenes) {
+          const node = els.nodesLayer.querySelector(`.node[data-id="${scene.id}"]`);
+          if (node) {
+            node.style.left = `${scene.x}px`;
+            node.style.top = `${scene.y}px`;
+          }
+        }
+        renderEdges();
+      }
+    }
+
+    function placeScene(index) {
+      const angle = index * 0.86;
+      const radius = 170 + index * 24;
+      return {
+        x: 240 + Math.cos(angle) * radius + Math.random() * 30,
+        y: 170 + Math.sin(angle) * radius + Math.random() * 26,
+      };
+    }
+
+    function openRename(sceneId) {
+      state.modal = 'rename';
+      state.renameSceneId = sceneId;
+      const scene = state.scenes.find(s => s.id === sceneId);
+      document.getElementById('renameInput').value = scene ? scene.name : '';
+      els.renameModal.classList.add('open');
+      setTimeout(() => document.getElementById('renameInput').focus(), 0);
+    }
+
+    function openStatementEditor(sceneId, stmtIndex) {
+      state.modal = 'stmt';
+      state.editingStmt = { sceneId, stmtIndex };
+      const scene = state.scenes.find(s => s.id === sceneId);
+      if (!scene) return;
+      document.getElementById('stmtEditInput').value = scene.statements[stmtIndex] || '';
+      els.stmtModal.classList.add('open');
+      setTimeout(() => document.getElementById('stmtEditInput').focus(), 0);
+    }
+
+    function closeModals() {
+      els.sceneModal.classList.remove('open');
+      els.renameModal.classList.remove('open');
+      els.stmtModal.classList.remove('open');
+      state.modal = null;
+      state.renameSceneId = null;
+      state.editingStmt = null;
+    }
+
+    function addScene(name) {
+      if (!normalizeIdentifier(name)) {
+        alert('Invalid scene name.');
+        return;
+      }
+      if (state.scenes.some(scene => scene.name === name)) {
+        alert('Scene already exists.');
+        return;
+      }
+      pushHistory();
+      const index = state.scenes.length;
+      const pos = placeScene(index);
+      state.scenes.push({
+        id: uid(),
+        name,
+        description_mode: 'none',
+        description_text: '',
+        statements: [],
+        x: pos.x,
+        y: pos.y,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: (Math.random() - 0.5) * 0.6,
+      });
+      state.selectedId = state.scenes[state.scenes.length - 1].id;
+      syncSourceFromScenes();
+      render();
+      showToast('Scene added');
+    }
+
+    function deleteScene(sceneId) {
+      const scene = state.scenes.find(s => s.id === sceneId);
+      if (!scene) return;
+      if (!confirm(`Delete scene '${scene.name}'?`)) return;
+      pushHistory();
+      state.scenes = state.scenes.filter(s => s.id !== sceneId);
+      if (state.selectedId === sceneId) state.selectedId = state.scenes[0]?.id || null;
+      syncSourceFromScenes();
+      render();
+      showToast('Scene deleted');
+    }
+
+    function moveScene(index, direction) {
+      const next = index + direction;
+      if (next < 0 || next >= state.scenes.length) return;
+      pushHistory();
+      const copy = [...state.scenes];
+      [copy[index], copy[next]] = [copy[next], copy[index]];
+      state.scenes = copy;
+      syncSourceFromScenes();
+      render();
+      showToast('Scene moved');
+    }
+
+    function removeStatement(sceneId, stmtIndex) {
+      const scene = state.scenes.find(s => s.id === sceneId);
+      if (!scene) return;
+      pushHistory();
+      scene.statements.splice(stmtIndex, 1);
+      syncSourceFromScenes();
+      render();
+      showToast('Statement removed');
+    }
+
+    function moveStatement(sceneId, stmtIndex, direction) {
+      const scene = state.scenes.find(s => s.id === sceneId);
+      if (!scene) return;
+      const next = stmtIndex + direction;
+      if (next < 0 || next >= scene.statements.length) return;
+      pushHistory();
+      [scene.statements[stmtIndex], scene.statements[next]] = [scene.statements[next], scene.statements[stmtIndex]];
+      syncSourceFromScenes();
+      render();
+      showToast('Statement moved');
+    }
+
+    function handleStatementSave() {
+      const input = document.getElementById('stmtEditInput').value.trim();
+      if (!input) return alert('Statement cannot be empty.');
+      const { sceneId, stmtIndex } = state.editingStmt || {};
+      const scene = state.scenes.find(s => s.id === sceneId);
+      if (!scene) return;
+      pushHistory();
+      scene.statements[stmtIndex] = input;
+      closeModals();
+      syncSourceFromScenes();
+      render();
+      showToast('Statement updated');
+    }
+
+    function applySource() {
+      const editor = document.getElementById('sourceEditor');
+      const parsed = parseSource(editor.value);
+      if (!parsed.length) {
+        alert('Could not parse source into scenes.');
+        return;
+      }
+      pushHistory();
+      state.scenes = parsed.map((scene, index) => ({
+        ...scene,
+        ...placeScene(index),
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: (Math.random() - 0.5) * 0.6,
+      }));
+      state.selectedId = state.scenes[0]?.id || null;
+      state.dirtySource = false;
+      render();
+      showToast(`Applied ${parsed.length} scene(s)`);
+    }
+
+    function finish() {
+      const source = scenesToSource(state.scenes).trim();
+      if (!source) {
+        alert('No scenes to return.');
+        return;
+      }
+      fetch('/api/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source }),
+      }).finally(() => showToast('Sent to REPL'));
+    }
+
+    function cancel() {
+      fetch('/api/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      }).finally(() => showToast('Cancelled'));
+    }
+
+    function render() {
+      ensureSelection();
+      document.getElementById('sceneCount').textContent = `${state.scenes.length} scene${state.scenes.length === 1 ? '' : 's'}`;
+      document.getElementById('physicsBtn').textContent = `Arcane Flow: ${state.physicsEnabled ? 'On' : 'Off'}`;
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === state.tab));
+      renderNodes();
+      updateWorldBounds();
+      renderEdges();
+      renderSidebar();
+    }
+
+    function renderSidebar() {
+      if (state.tab === 'source') {
+        state.sourceText = state.dirtySource ? state.sourceText : scenesToSource(state.scenes) || '# No scenes yet';
+        els.sidebarPanel.innerHTML = `
+          <div class="row" style="margin-bottom:10px;">
+            <button class="btn" id="refreshSourceBtn">Refresh</button>
+            <button class="btn primary" id="applySourceBtn">Apply to Graph</button>
+          </div>
+          <textarea class="srcbox" id="sourceEditor"></textarea>
+          <div class="hint">Edit the source directly here, then click Apply to Graph to rebuild the graph.</div>
+        `;
+        const editor = document.getElementById('sourceEditor');
+        editor.value = state.sourceText;
+        editor.addEventListener('input', () => {
+          state.sourceText = editor.value;
+          state.dirtySource = true;
+        });
+        document.getElementById('refreshSourceBtn').addEventListener('click', () => {
+          state.sourceText = scenesToSource(state.scenes) || '# No scenes yet';
+          state.dirtySource = false;
+          editor.value = state.sourceText;
+          showToast('Source refreshed');
+        });
+        document.getElementById('applySourceBtn').addEventListener('click', applySource);
+        return;
+      }
+
+      if (state.tab === 'scenes') {
+        els.sidebarPanel.innerHTML = state.scenes.length
+          ? `<div class="scene-list">${state.scenes.map((scene, index) => `
+              <div class="scene-item${scene.id === state.selectedId ? ' active' : ''}" data-id="${scene.id}">
+                <div class="scene-item-top">
+                  <span class="pill">${index === 0 ? 'START' : `#${index + 1}`}</span>
+                  <div class="scene-name">${escapeHtml(scene.name)}</div>
+                </div>
+                <div class="meta">${scene.statements.length} statement(s)</div>
+              </div>
+            `).join('')}</div>`
+          : '<div class="empty">No scenes yet. Add one to get started.</div>';
+        els.sidebarPanel.querySelectorAll('.scene-item').forEach(item => {
+          item.addEventListener('click', () => {
+            state.selectedId = item.dataset.id;
+            state.tab = 'editor';
+            render();
+          });
+        });
+        return;
+      }
+
+      const scene = selectedScene();
+      if (!scene) {
+        els.sidebarPanel.innerHTML = '<div class="empty">Click a node to edit it.</div>';
+        return;
+      }
+
+      els.sidebarPanel.innerHTML = `
+        <div class="section-title">Scene Editor</div>
+        <div class="field"><label>Scene Name</label><input id="sceneNameField" value="${escapeHtml(scene.name)}" /></div>
+        <div class="field"><label>Description Mode</label>
+          <select id="descModeField">
+            <option value="none" ${scene.description_mode === 'none' ? 'selected' : ''}>None</option>
+            <option value="manual" ${scene.description_mode === 'manual' ? 'selected' : ''}>Manual Description</option>
+            <option value="ai" ${scene.description_mode === 'ai' ? 'selected' : ''}>AI Scene Prompt</option>
+          </select>
+        </div>
+        <div class="field"><label>Description / Prompt</label><textarea id="descTextField">${escapeHtml(scene.description_text || '')}</textarea></div>
+        <div class="field"><label>Statements</label><div id="stmtList" class="stmt-list"></div></div>
+        <div class="field"><label>Add Statement</label>
+          <select id="stmtTypeField">
+            <option value="choice">Player choice</option>
+            <option value="if">If condition</option>
+            <option value="set">Set variable / inventory</option>
+            <option value="unset">Unset variable</option>
+            <option value="remove">Remove item</option>
+            <option value="aiopt">AI-generated choices</option>
+          </select>
+        </div>
+        <div id="stmtForm"></div>
+        <button class="btn primary" id="addStmtBtn">Add Statement</button>
+      `;
+
+      document.getElementById('sceneNameField').addEventListener('change', event => {
+        const newName = normalizeIdentifier(event.target.value);
+        if (!newName) return alert('Invalid scene name.');
+        if (state.scenes.some(other => other.id !== scene.id && other.name === newName)) return alert('Scene already exists.');
+        pushHistory();
+        scene.name = newName;
+        syncSourceFromScenes();
+        render();
+      });
+
+      document.getElementById('descModeField').addEventListener('change', event => {
+        pushHistory();
+        scene.description_mode = event.target.value;
+        if (scene.description_mode === 'none') scene.description_text = '';
+        syncSourceFromScenes();
+        render();
+      });
+
+      document.getElementById('descTextField').addEventListener('change', event => {
+        pushHistory();
+        scene.description_text = event.target.value;
+        syncSourceFromScenes();
+        render();
+      });
+
+      document.getElementById('stmtTypeField').addEventListener('change', renderStmtForm);
+      renderStmtForm();
+      renderStmtList(document.getElementById('stmtList'), scene);
+
+      document.getElementById('addStmtBtn').addEventListener('click', () => {
+        const built = buildStatement(document.getElementById('stmtTypeField').value);
+        if (built.error) return alert(built.error);
+        pushHistory();
+        scene.statements.push(built.value);
+        syncSourceFromScenes();
+        render();
+        showToast('Statement added');
+      });
+    }
+
+    function renderStmtList(container, scene) {
+      container.innerHTML = scene.statements.length ? scene.statements.map((stmt, idx) => `
+        <div class="stmt-item">
+          <div class="scene-item-top">
+            <div class="pill">#${idx + 1}</div>
+            <div class="scene-name" style="font-size:12px;">${escapeHtml(stmt).slice(0, 68)}${stmt.length > 68 ? '…' : ''}</div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn" data-stmt="edit" data-idx="${idx}">Edit</button>
+            <button class="btn" data-stmt="up" data-idx="${idx}">Up</button>
+            <button class="btn" data-stmt="down" data-idx="${idx}">Down</button>
+            <button class="btn warn" data-stmt="del" data-idx="${idx}">Remove</button>
+          </div>
+        </div>
+      `).join('') : '<div class="empty">No statements yet.</div>';
+
+      container.querySelectorAll('[data-stmt]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.dataset.idx);
+          const action = btn.dataset.stmt;
+          if (action === 'edit') {
+            state.editingStmt = { sceneId: scene.id, stmtIndex: idx };
+            document.getElementById('stmtEditInput').value = scene.statements[idx] || '';
+            els.stmtModal.classList.add('open');
+            return;
+          }
+          if (action === 'up') moveStatement(scene.id, idx, -1);
+          if (action === 'down') moveStatement(scene.id, idx, 1);
+          if (action === 'del') removeStatement(scene.id, idx);
+        });
+      });
+    }
+
+    function addListeners() {
+      document.getElementById('addSceneBtn').addEventListener('click', openSceneModal);
+      document.getElementById('physicsBtn').addEventListener('click', () => {
+        state.physicsEnabled = !state.physicsEnabled;
+        showToast(state.physicsEnabled ? 'Arcane flow awakened' : 'Arcane flow paused');
+        render();
+      });
+      document.getElementById('undoBtn').addEventListener('click', undo);
+      document.getElementById('redoBtn').addEventListener('click', redo);
+      document.getElementById('cancelBtn').addEventListener('click', cancel);
+      document.getElementById('finishBtn').addEventListener('click', finish);
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          state.tab = tab.dataset.tab;
+          render();
+        });
+      });
+
+      document.getElementById('sceneCancelBtn').addEventListener('click', closeModals);
+      document.getElementById('sceneCreateBtn').addEventListener('click', () => {
+        const name = normalizeIdentifier(document.getElementById('sceneNameInput').value);
+        if (!name) return alert('Invalid scene name.');
+        closeModals();
+        addScene(name);
+      });
+
+      document.getElementById('renameCancelBtn').addEventListener('click', closeModals);
+      document.getElementById('renameSaveBtn').addEventListener('click', () => {
+        const name = normalizeIdentifier(document.getElementById('renameInput').value);
+        if (!name) return alert('Invalid scene name.');
+        const scene = state.scenes.find(item => item.id === state.renameSceneId);
+        if (!scene) return closeModals();
+        if (state.scenes.some(other => other.id !== scene.id && other.name === name)) return alert('Scene already exists.');
+        pushHistory();
+        scene.name = name;
+        closeModals();
+        syncSourceFromScenes();
+        render();
+        showToast('Scene renamed');
+      });
+
+      document.getElementById('stmtCancelBtn').addEventListener('click', closeModals);
+      document.getElementById('stmtSaveBtn').addEventListener('click', handleStatementSave);
+
+      window.addEventListener('keydown', event => {
+        const ctrl = event.ctrlKey || event.metaKey;
+        if (ctrl && event.key.toLowerCase() === 'z') { event.preventDefault(); undo(); }
+        if (ctrl && (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))) { event.preventDefault(); redo(); }
+        if (ctrl && event.key.toLowerCase() === 'n') { event.preventDefault(); openSceneModal(); }
+        if (event.key === 'Escape') closeModals();
+      });
+
+      let raf = null;
+      window.addEventListener('resize', () => {
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(renderEdges);
+      });
+
+      document.addEventListener('mousemove', event => {
+        if (!state.dragging) return;
+        const scene = state.scenes.find(item => item.id === state.dragging);
+        if (!scene) return;
+        const canvasRect = els.canvas.getBoundingClientRect();
+        scene.x = event.clientX - canvasRect.left + els.canvas.scrollLeft - state.dragOffsetX;
+        scene.y = event.clientY - canvasRect.top + els.canvas.scrollTop - state.dragOffsetY;
+        const node = els.nodesLayer.querySelector(`.node[data-id="${scene.id}"]`);
+        if (node) {
+          node.style.left = `${scene.x}px`;
+          node.style.top = `${scene.y}px`;
+        }
+        updateWorldBounds();
+        renderEdges();
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (state.dragging) {
+          pushHistory();
+          state.dragging = null;
+          syncSourceFromScenes();
+        }
+      });
+    }
+
+    function init() {
+      state.scenes = INITIAL_SOURCE ? parseSource(INITIAL_SOURCE) : [];
+      if (!state.scenes.length && INITIAL_SOURCE && INITIAL_SOURCE.trim()) {
+        state.sourceText = INITIAL_SOURCE;
+        state.tab = 'source';
+      }
+      if (state.scenes.length) {
+        state.scenes.forEach((scene, index) => {
+          const pos = placeScene(index);
+          scene.x = pos.x;
+          scene.y = pos.y;
+          scene.vx = (Math.random() - 0.5) * 0.6;
+          scene.vy = (Math.random() - 0.5) * 0.6;
+        });
+        state.selectedId = state.scenes[0].id;
+      }
+      syncSourceFromScenes();
+      addListeners();
+      render();
+      runPhysicsFrame();
+    }
+
+    init();
+  </script>
+</body>
+</html>
